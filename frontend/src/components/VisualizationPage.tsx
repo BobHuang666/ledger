@@ -20,6 +20,15 @@ type KPIData = {
   cemeteryCategories: number;
 };
 
+/** 古风配色：朱砂、靛青、赭石、竹青、紫檀、藤黄 */
+const ANTIQUE_PALETTE = ['#9e342e', '#33566b', '#b3824c', '#5f7a5c', '#7c6a86', '#c0a062'];
+const INK = '#2b2520';
+const INK_MUTED = '#6b6154';
+const RULE = '#c9b99c';
+const SERIF_FONT = "'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif";
+const AXIS_LABEL = { color: INK_MUTED, fontSize: 12 };
+const SPLIT_LINE = { lineStyle: { color: 'rgba(201, 185, 156, 0.45)', type: 'dashed' as const } };
+
 const VisualizationPage = () => {
   const [data, setData] = useState<AnalyticsOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,24 +79,27 @@ const VisualizationPage = () => {
 
   // 通用图表配置
   const commonOption = {
+    color: ANTIQUE_PALETTE,
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: 'rgba(31, 107, 255, 0.2)',
+      backgroundColor: 'rgba(253, 250, 243, 0.96)',
+      borderColor: 'rgba(201, 185, 156, 0.9)',
       borderWidth: 1,
       textStyle: {
-        color: '#1f2937',
+        color: INK,
+        fontFamily: SERIF_FONT,
       },
       formatter: '{b}: {c} ({d}%)',
     },
     textStyle: {
-      fontFamily: "'Inter', 'Noto Sans SC', sans-serif",
+      fontFamily: SERIF_FONT,
+      color: INK_MUTED,
     },
   };
 
   const sankeyColors = {
-    origin: '#1f6bff',
-    address: '#34d399',
+    origin: '#9e342e',
+    address: '#5f7a5c',
   };
 
   const formatSankeyTooltip = (params: SankeyTooltipParams): string => {
@@ -116,12 +128,18 @@ const VisualizationPage = () => {
     xAxis: {
       type: 'category',
       axisLabel: {
+        ...AXIS_LABEL,
         rotate: 45,
         interval: 0,
       },
+      axisLine: { lineStyle: { color: RULE } },
+      axisTick: { alignWithLabel: true, lineStyle: { color: RULE } },
     },
     yAxis: {
       type: 'value',
+      axisLabel: AXIS_LABEL,
+      axisLine: { show: false },
+      splitLine: SPLIT_LINE,
     },
   };
 
@@ -142,12 +160,18 @@ const VisualizationPage = () => {
     xAxis: {
       type: 'category',
       axisLabel: {
+        ...AXIS_LABEL,
         rotate: 45,
         interval: 0,
       },
+      axisLine: { lineStyle: { color: RULE } },
+      axisTick: { alignWithLabel: true, lineStyle: { color: RULE } },
     },
     yAxis: {
       type: 'value',
+      axisLabel: AXIS_LABEL,
+      axisLine: { show: false },
+      splitLine: SPLIT_LINE,
     },
   };
 
@@ -158,6 +182,7 @@ const VisualizationPage = () => {
       orient: 'vertical',
       right: 10,
       top: 'center',
+      textStyle: { color: INK_MUTED, fontFamily: SERIF_FONT },
     },
   };
 
@@ -234,7 +259,7 @@ const VisualizationPage = () => {
                   itemStyle: {
                     shadowBlur: 10,
                     shadowOffsetX: 0,
-                    shadowColor: 'rgba(31, 107, 255, 0.5)',
+                    shadowColor: 'rgba(158, 52, 46, 0.45)',
                   },
                 },
               }],
@@ -262,8 +287,8 @@ const VisualizationPage = () => {
                     x2: 0,
                     y2: 1,
                     colorStops: [
-                      { offset: 0, color: '#1f6bff' },
-                      { offset: 1, color: '#3f89ff' },
+                      { offset: 0, color: '#33566b' },
+                      { offset: 1, color: '#89a7b5' },
                     ],
                   },
                 },
@@ -280,7 +305,7 @@ const VisualizationPage = () => {
 
       {/* 死亡月份趋势 - 折线图 */}
       <div className="card soft card-content-large chart-block">
-        <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: 'var(--space-4)', color: 'var(--color-text-primary)' }}>
+        <h3 className="chart-title">
           死亡人数月度变化趋势
         </h3>
         <ReactECharts
@@ -298,17 +323,17 @@ const VisualizationPage = () => {
                   x2: 0,
                   y2: 1,
                   colorStops: [
-                    { offset: 0, color: 'rgba(31, 107, 255, 0.3)' },
-                    { offset: 1, color: 'rgba(31, 107, 255, 0.05)' },
+                    { offset: 0, color: 'rgba(158, 52, 46, 0.28)' },
+                    { offset: 1, color: 'rgba(158, 52, 46, 0.04)' },
                   ],
                 },
               },
               lineStyle: {
-                color: '#1f6bff',
+                color: '#9e342e',
                 width: 3,
               },
               itemStyle: {
-                color: '#1f6bff',
+                color: '#9e342e',
               },
             }],
             xAxis: {
@@ -353,10 +378,13 @@ const VisualizationPage = () => {
                 ...lineOption,
                 xAxis: {
                   type: 'category',
+                  axisLine: { lineStyle: { color: RULE } },
+                  axisTick: { alignWithLabel: true, lineStyle: { color: RULE } },
                   axisLabel: {
                     rotate: 0,
                     interval: 0,
                     fontSize: 12,
+                    color: INK_MUTED,
                     formatter: (value: string) => {
                       // 从完整日期（如"1943-03-21"）中提取月份（如"3月"）
                       if (value && value.includes('-')) {
@@ -389,17 +417,17 @@ const VisualizationPage = () => {
                       x2: 0,
                       y2: 1,
                       colorStops: [
-                        { offset: 0, color: 'rgba(31, 107, 255, 0.3)' },
-                        { offset: 1, color: 'rgba(31, 107, 255, 0.05)' },
+                        { offset: 0, color: 'rgba(51, 86, 107, 0.28)' },
+                        { offset: 1, color: 'rgba(51, 86, 107, 0.04)' },
                       ],
                     },
                   },
                   lineStyle: {
-                    color: '#1f6bff',
+                    color: '#33566b',
                     width: 3,
                   },
                   itemStyle: {
-                    color: '#1f6bff',
+                    color: '#33566b',
                   },
                 }],
               }}
@@ -430,8 +458,8 @@ const VisualizationPage = () => {
                     x2: 1,
                     y2: 0,
                     colorStops: [
-                      { offset: 0, color: '#1f6bff' },
-                      { offset: 1, color: '#3f89ff' },
+                      { offset: 0, color: '#9e342e' },
+                      { offset: 1, color: '#c08b52' },
                     ],
                   },
                 },
@@ -464,8 +492,8 @@ const VisualizationPage = () => {
                     x2: 1,
                     y2: 0,
                     colorStops: [
-                      { offset: 0, color: '#1f6bff' },
-                      { offset: 1, color: '#3f89ff' },
+                      { offset: 0, color: '#4f6b52' },
+                      { offset: 1, color: '#a3b894' },
                     ],
                   },
                 },
@@ -512,7 +540,7 @@ const VisualizationPage = () => {
                   curveness: 0.5,
                 },
                 label: {
-                  color: '#1f2937',
+                  color: INK,
                   fontSize: 13,
                   formatter: (params: SankeyTooltipParams) => params.data?.raw || params.name || '',
                 },
@@ -549,8 +577,8 @@ const VisualizationPage = () => {
                     x2: 1,
                     y2: 0,
                     colorStops: [
-                      { offset: 0, color: '#1f6bff' },
-                      { offset: 1, color: '#3f89ff' },
+                      { offset: 0, color: '#8c5a3c' },
+                      { offset: 1, color: '#c99a5f' },
                     ],
                   },
                 },
@@ -580,7 +608,7 @@ const VisualizationPage = () => {
                   itemStyle: {
                     shadowBlur: 10,
                     shadowOffsetX: 0,
-                    shadowColor: 'rgba(31, 107, 255, 0.5)',
+                    shadowColor: 'rgba(158, 52, 46, 0.45)',
                   },
                 },
               }],

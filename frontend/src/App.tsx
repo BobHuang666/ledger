@@ -12,8 +12,11 @@ const App = () => {
       <header className="app-header">
         <div className="app-header-inner">
           <h1 className="app-title">
-            <span className="app-title-line">汕头存心善堂二十世纪</span>
-            <span className="app-title-line">四十年代收客记录系统</span>
+            <span className="app-title-seal" aria-hidden="true">善</span>
+            <span className="app-title-lines">
+              <span className="app-title-line">汕头存心善堂二十世纪</span>
+              <span className="app-title-line">四十年代收客记录系统</span>
+            </span>
           </h1>
           <nav className="nav-bar">
             <NavLink
