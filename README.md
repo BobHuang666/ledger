@@ -28,7 +28,19 @@ STv3/
 │   ├── .env.example           # 环境变量示例
 │   └── dist/                  # 构建输出（git 忽略）
 │
-└── docs/ANALYSIS.md            # 项目分析与待办清单
+├── deploy/                     # 部署相关（不参与构建）
+│   ├── setup.sh               # 服务器一键部署脚本
+│   ├── autoupdate.sh          # 代码自动更新脚本（配合 cron，每 5 分钟自检）
+│   └── Caddyfile              # 反向代理配置模板（需复制到 /etc/caddy/Caddyfile）
+│
+├── Dockerfile                  # 多阶段构建：前端构建 + 后端运行
+├── docker-compose.yml          # 容器编排
+├── .dockerignore               # 构建上下文排除规则
+├── .gitattributes              # 强制脚本使用 LF 换行（服务器执行必需）
+│
+└── docs/
+    ├── ANALYSIS.md            # 项目分析与待办清单
+    └── DEPLOY.md              # 部署文档（腾讯云轻量 + 域名 + HTTPS）
 ```
 
 ## 核心功能
@@ -90,28 +102,63 @@ npm run dev               # http://localhost:5173，接口已配置代理到 800
 
 ## 生产部署
 
-### 方式一：同源部署（推荐，单个服务）
+单个容器同时提供 API 与前端页面：容器内先构建 `frontend/dist`，再由 FastAPI 托管，
+API 与页面同源，无需配置跨域与接口地址。
 
-后端在启动时会自动托管 `frontend/dist`，API 与前端同源，无需配置跨域与接口地址。
+**完整步骤见 [docs/DEPLOY.md](docs/DEPLOY.md)**（含腾讯云境内服务器、域名备案、HTTPS 配置与故障排查）。
 
-```powershell
-cd frontend && npm install && npm run build
-cd ../backend
-uvicorn main:app --host 0.0.0.0 --port $PORT
+> ⚠️ 服务器在中国内地时，域名**必须先完成 ICP 备案**才能对外访问（香港/新加坡免备案）。
+
+### 最快上手
+
+```bash
+git clone <仓库地址> ledger && cd ledger
+bash deploy/setup.sh          # 装 Docker → 镜像加速 → 构建 → 启动 → 健康检查，约 3-6 分钟
+curl http://127.0.0.1:8000/health
 ```
 
-访问 `http://<host>:<port>/` 即可。适用于 Render / Koyeb / Leapcell / Railway 等平台（构建命令装依赖，启动命令如上）。
+脚本会自动识别国内网络并切换 npm / pip / Docker 镜像源（也可 `CN=1` 强制指定）。
 
-### 方式二：前后端分离
+### 绑定域名与 HTTPS
 
-- 前端部署到 Vercel / Netlify（框架预设 Vite，开启 SPA rewrite），构建时设置环境变量：
-  ```
-  VITE_API_BASE_URL=https://<后端域名>
-  ```
-- 后端单独部署 `backend/`，后端已开启 CORS，无需额外配置。
+```bash
+apt install -y caddy
+sed -i 's/ledger.example.com/你的域名/g' deploy/Caddyfile
+cp deploy/Caddyfile /etc/caddy/Caddyfile
+systemctl reload caddy
+```
 
-## 数据来源与说明
+证书由 Caddy 自动申请与续期，之后访问 `https://你的域名`。
 
-数据为汕头存心善堂二十世纪四十年代收客历史记录，仅用于检索与统计展示，系统当前为只读。
+### 部署文件说明
 
-分析与后续优化计划见 [docs/ANALYSIS.md](docs/ANALYSIS.md)。
+| 文件 | 类型 | 说明 |
+| --- | --- | --- |
+| `Dockerfile` | 构建配置 | 多阶段：Node 20 构建前端 → Python 3.11-slim 运行后端并托管 dist |
+| `docker-compose.yml` | 构建配置 | 容器编排，端口只监听 `127.0.0.1:8000`，外网由 Caddy 反代 |
+| `.dockerignore` | 构建配置 | 排除 `node_modules`、`dist`、`.git` |
+| `deploy/setup.sh` | 服务器执行 | 一键部署脚本（在服务器上 `bash deploy/setup.sh`） |
+| `deploy/Caddyfile` | 配置模板 | 需复制到 `/etc/caddy/Caddyfile` 才生效 |
+
+### 更新与运维
+
+```bash
+git pull && docker compose up -d --build   # 更新代码并重新构建
+docker compose logs -f                     # 查看日志
+docker compose ps                          # healthy 为正常
+docker stats ledger                        # 内存占用（约 200-300MB）
+```
+
+同一台机器上新增服务：在 `docker-compose.yml` 加一个服务映射到 `127.0.0.1:8001`，
+再在 Caddyfile 加一段 `reverse_proxy 127.0.0.1:8001`，按域名自动分流。
+
+### 代码自动更新
+
+`deploy/autoupdate.sh` 配合 cron，可实现 push 后 5 分钟内自动拉取构建（构建失败不影响线上服务）：
+
+```bash
+chmod +x deploy/*.sh
+(crontab -l 2>/dev/null; echo "*/5 * * * * /root/ledger/deploy/autoupdate.sh >> /var/log/ledger-autoupdate.log 2>&1") | crontab -
+```
+
+详见 [docs/DEPLOY.md](docs/DEPLOY.md)（含 GitHub Actions 即时触发方案）。

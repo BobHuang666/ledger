@@ -1,0 +1,18 @@
+services:
+  ledger:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # 默认官方源；境内服务器由 deploy/setup.sh 自动传入国内镜像源覆盖
+      # 手动构建时可自行指定：NPM_REGISTRY=https://registry.npmmirror.com docker compose build
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: ledger:latest
+    container_name: ledger
+    restart: unless-stopped
+    # 只监听本机，外网统一由 Caddy 反代，不直接暴露容器端口
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PORT: "8000"

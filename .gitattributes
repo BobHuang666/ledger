@@ -1,0 +1,13 @@
+# 统一使用 LF 换行，避免 Windows 下（core.autocrlf=true）把 CRLF 提交上去，
+# 导致 Linux 服务器上 `bash deploy/setup.sh` 报 "\r: command not found"
+* text=auto eol=lf
+
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+Caddyfile   text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+*.png binary
+*.ico binary
+*.xlsx binary
