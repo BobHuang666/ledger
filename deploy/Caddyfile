@@ -1,27 +1,54 @@
-# Caddy 反向代理配置样例
-# 路径：/etc/caddy/Caddyfile
-# 修改后执行：systemctl reload caddy
-# 证书由 Caddy 自动申请与续期（Let's Encrypt），无需手动操作
+# Nginx 反向代理配置样例
+# 路径：/etc/nginx/sites-available/你的域名
+# 创建软链接：ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
+# 修改后执行：nginx -t && systemctl reload nginx
+# SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot）
 
-ledger.example.com {
-    # 开启压缩：echarts 产物 1MB，gzip 后约 330KB，首屏快一倍
-    encode gzip
+server {
+    listen 80;
+    server_name ledger.example.com;
+    return 301 https://$host$request_uri;
+}
 
-    # 后端接口与前端同源，全部转发给本机容器
-    reverse_proxy 127.0.0.1:8000
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ledger.example.com;
 
-    # 访问日志默认输出到 journald，查看：journalctl -u caddy -f
-    # 如需单独写文件，先执行 mkdir -p /var/log/caddy 并放开下面的注释：
-    # log {
-    #     output file /var/log/caddy/ledger.log
-    # }
+    ssl_certificate /etc/nginx/ssl/your_domain_bundle.crt;
+    ssl_certificate_key /etc/nginx/ssl/your_domain.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # gzip 压缩：echarts 产物 1MB，gzip 后约 330KB
+    gzip on;
+    gzip_types text/plain application/json application/javascript text/css image/svg+xml;
+    gzip_min_length 256;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
 }
 
 # ---------- 以后在同一台机器上加第二个服务 ----------
 # 只需：1) docker-compose 里加一个服务映射到 127.0.0.1:8001
-#      2) 在这里再加一段，Caddy 按域名自动分流，证书同样自动签发
+#      2) 在这里再加一段 server 块，Nginx 按域名自动分流
 #
-# another.example.com {
-#     encode gzip
-#     reverse_proxy 127.0.0.1:8001
+# server {
+#     listen 443 ssl;
+#     http2 on;
+#     server_name another.example.com;
+#     ssl_certificate /etc/nginx/ssl/another_bundle.crt;
+#     ssl_certificate_key /etc/nginx/ssl/another.key;
+#     location / {
+#         proxy_pass http://127.0.0.1:8001;
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Real-IP $remote_addr;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
 # }

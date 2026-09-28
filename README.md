@@ -31,7 +31,7 @@ STv3/
 ├── deploy/                     # 部署相关（不参与构建）
 │   ├── setup.sh               # 服务器一键部署脚本
 │   ├── autoupdate.sh          # 代码自动更新脚本（配合 cron，每 5 分钟自检）
-│   └── Caddyfile              # 反向代理配置模板（需复制到 /etc/caddy/Caddyfile）
+│   └── Caddyfile              # Nginx 反向代理配置模板（需复制到 /etc/nginx/sites-available/）
 │
 ├── Dockerfile                  # 多阶段构建：前端构建 + 后端运行
 ├── docker-compose.yml          # 容器编排
@@ -122,23 +122,24 @@ curl http://127.0.0.1:8000/health
 ### 绑定域名与 HTTPS
 
 ```bash
-apt install -y caddy
+# Nginx 已在前面步骤安装，直接配置反向代理
 sed -i 's/ledger.example.com/你的域名/g' deploy/Caddyfile
-cp deploy/Caddyfile /etc/caddy/Caddyfile
-systemctl reload caddy
+cp deploy/Caddyfile /etc/nginx/sites-available/你的域名
+ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 ```
 
-证书由 Caddy 自动申请与续期，之后访问 `https://你的域名`。
+SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后访问 `https://你的域名`。
 
 ### 部署文件说明
 
 | 文件 | 类型 | 说明 |
 | --- | --- | --- |
 | `Dockerfile` | 构建配置 | 多阶段：Node 20 构建前端 → Python 3.11-slim 运行后端并托管 dist |
-| `docker-compose.yml` | 构建配置 | 容器编排，端口只监听 `127.0.0.1:8000`，外网由 Caddy 反代 |
+| `docker-compose.yml` | 构建配置 | 容器编排，端口只监听 `127.0.0.1:8000`，外网由 Nginx 反代 |
 | `.dockerignore` | 构建配置 | 排除 `node_modules`、`dist`、`.git` |
 | `deploy/setup.sh` | 服务器执行 | 一键部署脚本（在服务器上 `bash deploy/setup.sh`） |
-| `deploy/Caddyfile` | 配置模板 | 需复制到 `/etc/caddy/Caddyfile` 才生效 |
+| `deploy/Caddyfile` | 配置模板 | Nginx 反代模板，需复制到 `/etc/nginx/sites-available/` 才生效 |
 
 ### 更新与运维
 
@@ -150,7 +151,7 @@ docker stats ledger                        # 内存占用（约 200-300MB）
 ```
 
 同一台机器上新增服务：在 `docker-compose.yml` 加一个服务映射到 `127.0.0.1:8001`，
-再在 Caddyfile 加一段 `reverse_proxy 127.0.0.1:8001`，按域名自动分流。
+再在 Nginx 配置中加一段 `proxy_pass http://127.0.0.1:8001`，按域名自动分流。
 
 ### 代码自动更新
 
