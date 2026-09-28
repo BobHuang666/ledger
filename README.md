@@ -31,7 +31,7 @@ STv3/
 ├── deploy/                     # 部署相关（不参与构建）
 │   ├── setup.sh               # 服务器一键部署脚本
 │   ├── autoupdate.sh          # 代码自动更新脚本（配合 cron，每 5 分钟自检）
-│   └── Caddyfile              # Nginx 反向代理配置模板（需复制到 /etc/nginx/sites-available/）
+│   └── nginx.conf             # Nginx 反向代理配置模板（需复制到 /etc/nginx/sites-available/）
 │
 ├── Dockerfile                  # 多阶段构建：前端构建 + 后端运行
 ├── docker-compose.yml          # 容器编排
@@ -123,8 +123,8 @@ curl http://127.0.0.1:8000/health
 
 ```bash
 # Nginx 已在前面步骤安装，直接配置反向代理
-sed -i 's/ledger.example.com/你的域名/g' deploy/Caddyfile
-cp deploy/Caddyfile /etc/nginx/sites-available/你的域名
+sed -i 's/ledger.example.com/你的域名/g' deploy/nginx.conf
+cp deploy/nginx.conf /etc/nginx/sites-available/你的域名
 ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
@@ -139,7 +139,7 @@ SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后�
 | `docker-compose.yml` | 构建配置 | 容器编排，端口只监听 `127.0.0.1:8000`，外网由 Nginx 反代 |
 | `.dockerignore` | 构建配置 | 排除 `node_modules`、`dist`、`.git` |
 | `deploy/setup.sh` | 服务器执行 | 一键部署脚本（在服务器上 `bash deploy/setup.sh`） |
-| `deploy/Caddyfile` | 配置模板 | Nginx 反代模板，需复制到 `/etc/nginx/sites-available/` 才生效 |
+| `deploy/nginx.conf` | 配置模板 | Nginx 反代模板，需复制到 `/etc/nginx/sites-available/` 才生效 |
 
 ### 更新与运维
 

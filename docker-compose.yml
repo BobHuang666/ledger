@@ -11,7 +11,7 @@ services:
     image: ledger:latest
     container_name: ledger
     restart: unless-stopped
-    # 只监听本机，外网统一由 Caddy 反代，不直接暴露容器端口
+    # 只监听本机，外网统一由 Nginx 反代，不直接暴露容器端口
     ports:
       - "127.0.0.1:8000:8000"
     environment:

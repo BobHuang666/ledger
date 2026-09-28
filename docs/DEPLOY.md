@@ -56,7 +56,7 @@
 | 文件 | 怎么用 | 说明 |
 | --- | --- | --- |
 | `deploy/setup.sh` | **在服务器上执行** `bash deploy/setup.sh` | 一键脚本：装 Docker → 配镜像加速 → 加 Swap → 构建 → 启动 → 健康检查 |
-| `deploy/Caddyfile` | **复制到 `/etc/caddy/Caddyfile`** | 反向代理模板。放项目目录里**不会生效**，只是给你复制用的样例 |
+| `deploy/nginx.conf` | **复制到 `/etc/nginx/sites-available/`** | Nginx 反向代理模板。放项目目录里**不会生效**，只是给你复制用的样例 |
 
 ### C. 运行时代码（会被打进镜像）
 
@@ -74,12 +74,12 @@ docker-compose.yml  ─────────────▶ docker compose bu
 backend/ + frontend/                   ▼
                                    容器(ledger):8000  ← 只监听本机
 deploy/setup.sh     ─────────────▶ 执行它完成上面全部步骤
-deploy/Caddyfile    ─────────────▶ cp 到 /etc/caddy/ → Caddy:443 对外 + HTTPS
+deploy/nginx.conf   ─────────────▶ cp 到 /etc/nginx/sites-available/ → Nginx:443 对外 + HTTPS
 ```
 
 ### 是的，这些文件就够了
 
-整条链路是完整的：拉代码 → 跑一个脚本 → 服务就起来了；再复制一个配置到 Caddy → 域名 + HTTPS 就有了。
+整条链路是完整的：拉代码 → 跑一个脚本 → 服务就起来了；再复制一个配置到 Nginx → 域名 + HTTPS 就有了。
 你需要自己做的只有三件事：**买服务器、买/备好域名、域名备案**。剩下的全部由脚本完成。
 
 ---
@@ -113,7 +113,7 @@ git push origin main
 | 端口 | 用途 |
 | --- | --- |
 | 22 | SSH |
-| 80 | HTTP（Caddy 签发证书要用，必开） |
+| 80 | HTTP（Nginx 需要，用于 HTTP→HTTPS 重定向，必开） |
 | 443 | HTTPS |
 | 8000 | 仅备案期间临时访问用，备案通过后删掉 |
 
@@ -175,27 +175,23 @@ ssh -L 8000:127.0.0.1:8000 root@你的服务器IP
 
 > 域名若用 Cloudflare 做 DNS，请把代理小黄云**关掉**（灰色纯 DNS），否则国内访问会绕路变慢。
 
-### 第 8 步：配置 HTTPS（Caddy 自动证书）
+### 第 8 步：配置 HTTPS（Nginx + 手动证书）
 
 > **前提**：DNS 已解析到本机（`ping 你的域名` 返回服务器 IP）且**备案已通过**。
-> 否则 Caddy 申请证书会反复失败，`journalctl -u caddy -f` 中会持续刷错误。
+> SSL 证书需提前申请（腾讯云 SSL 或 Let's Encrypt certbot），部署到 `/etc/nginx/ssl/`。
 
 ```bash
-apt install -y caddy
-
-sed -i 's/ledger.example.com/你的域名/g' deploy/Caddyfile
-cp deploy/Caddyfile /etc/caddy/Caddyfile
-systemctl reload caddy
+# Nginx 已在前面步骤安装，直接配置反向代理
+sed -i 's/ledger.example.com/你的域名/g' deploy/nginx.conf
+cp deploy/nginx.conf /etc/nginx/sites-available/你的域名
+ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
 ```
 
-访问 `https://你的域名` 即可。证书由 Let's Encrypt 自动签发，**到期自动续期，无需人工干预**。
+访问 `https://你的域名` 即可。
 
-> 若 `apt install caddy` 版本过旧，用官方源：
-> ```bash
-> curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-> curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
-> apt update && apt install -y caddy
-> ```
+> 证书到期前需手动续期并替换文件，然后 `systemctl reload nginx`。
+> 也可使用 certbot 自动续期：`apt install -y certbot python3-certbot-nginx && certbot --nginx -d 你的域名`
 
 ---
 
@@ -215,14 +211,24 @@ docker stats ledger                        # 看内存（预期 200-300MB）
 ### 加第二个服务
 
 1. `docker-compose.yml` 里加一个服务，映射到 `127.0.0.1:8001`
-2. `/etc/caddy/Caddyfile` 追加一段（`deploy/Caddyfile` 末尾有模板）：
-   ```
-   another.example.com {
-       encode gzip
-       reverse_proxy 127.0.0.1:8001
+2. `/etc/nginx/sites-available/` 追加一段（`deploy/nginx.conf` 末尾有模板）：
+   ```nginx
+   server {
+       listen 443 ssl;
+       http2 on;
+       server_name another.example.com;
+       ssl_certificate /etc/nginx/ssl/another_bundle.crt;
+       ssl_certificate_key /etc/nginx/ssl/another.key;
+       location / {
+           proxy_pass http://127.0.0.1:8001;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
    }
    ```
-3. `systemctl reload caddy`
+3. `nginx -t && systemctl reload nginx`
 
 2核2G 跑 3–5 个这类轻量服务没问题；更多就升到 2核4G。
 
@@ -295,6 +301,6 @@ jobs:
 | 构建时卡在拉取基础镜像 | Docker 镜像加速没生效，检查 `cat /etc/docker/daemon.json`，或去腾讯云容器服务控制台获取专属加速器地址 |
 | 构建报 OOM / Killed | 脚本已自动加 Swap；仍失败就临时升配到 2C4G 构建一次再降回来 |
 | `502 Bad Gateway` | 容器还没起来（首次约 30 秒），看 `docker compose logs -f` |
-| Caddy 起不来 | 80/443 被占用：`ss -lntp \| grep -E ':80\|:443'`；证书签发失败多半是**备案未完成**导致 80 不可达 |
+| Nginx 起不来 | 80/443 被占用：`ss -lntp \| grep -E ':80\|:443'`；配置语法错误：`nginx -t` 检查 |
 | 域名能解析但打不开 | 先确认备案状态；再确认防火墙 80/443 已放行 |
 | 页面能开、接口 404 | 确认访问的是根路径，看容器日志里请求是否到达 |

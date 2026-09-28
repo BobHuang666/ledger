@@ -101,7 +101,7 @@ for i in $(seq 1 40); do
     curl -s http://127.0.0.1:8000/health
     echo
     echo "本机验证：curl http://127.0.0.1:8000/health"
-    echo "下一步：绑定域名（境内服务器需先完成 ICP 备案），配置 deploy/Caddyfile（Nginx 反代模板）后即可外网访问"
+    echo "下一步：绑定域名（境内服务器需先完成 ICP 备案），配置 deploy/nginx.conf（Nginx 反代模板）后即可外网访问"
     echo "可选：开启代码自动更新（cron 每 5 分钟检查远端并自动重建），见 docs/DEPLOY.md"
     exit 0
   fi
