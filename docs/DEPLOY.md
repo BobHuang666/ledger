@@ -156,7 +156,7 @@ bash deploy/setup.sh          # 自动判断国内源
 ### 第 6 步：验证（备案完成前）
 
 ```bash
-curl http://127.0.0.1:8000/health          # 服务器上验证，应返回 rows:8005
+curl http://127.0.0.1:8000/ledger/health    # 服务器上验证，应返回 rows:8005
 ```
 
 想在本地浏览器看，用 SSH 隧道（**在你电脑新开一个 PowerShell 窗口**，不用开防火墙）：
@@ -165,7 +165,7 @@ curl http://127.0.0.1:8000/health          # 服务器上验证，应返回 rows
 ssh -L 8000:127.0.0.1:8000 root@你的服务器IP
 ```
 
-窗口保持开着，浏览器访问 `http://localhost:8000`。
+窗口保持开着，浏览器访问 `http://localhost:8000/ledger/`。
 
 ### 第 7 步：域名解析 + 备案
 
@@ -188,7 +188,7 @@ ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-访问 `https://你的域名` 即可。
+访问 `https://你的域名/ledger/` 即可。
 
 > 证书到期前需手动续期并替换文件，然后 `systemctl reload nginx`。
 > 也可使用 certbot 自动续期：`apt install -y certbot python3-certbot-nginx && certbot --nginx -d 你的域名`
@@ -244,7 +244,7 @@ docker stats ledger                        # 看内存（预期 200-300MB）
 
 ```bash
 chmod +x /root/ledger/deploy/*.sh
-(crontab -l 2>/dev/null; echo "*/5 * * * * /root/ledger/deploy/autoupdate.sh >> /var/log/ledger-autoupdate.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "*/5 * * * * cd /root/ledger && bash deploy/autoupdate.sh >> /root/ledger/deploy/autoupdate.log 2>&1") | crontab -
 crontab -l        # 确认已写入
 ```
 
@@ -255,7 +255,7 @@ crontab -l        # 确认已写入
 - 分支不是 `main` 时，在 cron 里加环境变量：`BRANCH=dev /root/ledger/deploy/autoupdate.sh`
 
 ```bash
-tail -f /var/log/ledger-autoupdate.log        # 查看更新记录
+tail -f /root/ledger/deploy/autoupdate.log      # 查看更新记录
 crontab -l | grep -v autoupdate | crontab -   # 关闭自动更新
 ```
 
@@ -303,4 +303,4 @@ jobs:
 | `502 Bad Gateway` | 容器还没起来（首次约 30 秒），看 `docker compose logs -f` |
 | Nginx 起不来 | 80/443 被占用：`ss -lntp \| grep -E ':80\|:443'`；配置语法错误：`nginx -t` 检查 |
 | 域名能解析但打不开 | 先确认备案状态；再确认防火墙 80/443 已放行 |
-| 页面能开、接口 404 | 确认访问的是根路径，看容器日志里请求是否到达 |
+| 页面能开、接口 404 | 确认访问的是 `/ledger/` 子路径，Nginx 和后端路由均已配置 /ledger 前缀 |

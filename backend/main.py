@@ -149,7 +149,7 @@ class SearchRequest(BaseModel):
     pageSize: Optional[int] = 20
 
 # ✅ 1. 高级搜索接口（多字段、精确/模糊匹配，支持分页）
-@app.post("/search")
+@app.post("/ledger/search")
 def search(request: SearchRequest):
     filtered_df = apply_search_filters(request)
     page = request.page or 1
@@ -165,7 +165,7 @@ def search(request: SearchRequest):
     }
 
 
-@app.post("/search/export")
+@app.post("/ledger/search/export")
 def export_search(request: SearchRequest):
     filtered_df = apply_search_filters(request)
     if filtered_df.empty:
@@ -174,7 +174,7 @@ def export_search(request: SearchRequest):
     return make_excel_response(filtered_df, "search_results.xlsx")
 
 # ✅ 2. 通用统计接口（按某字段分组，支持分页）
-@app.get("/stats")
+@app.get("/ledger/stats")
 def stats(
     field: Optional[str] = Query(None),
     fields: Optional[List[str]] = Query(None),
@@ -219,7 +219,7 @@ def stats(
     }
 
 
-@app.get("/stats/export")
+@app.get("/ledger/stats/export")
 def export_stats(
     field: Optional[str] = Query(None),
     fields: Optional[List[str]] = Query(None)
@@ -237,13 +237,13 @@ def export_stats(
     stats_data = grouped[selected_fields + ["数量"]]
     return make_excel_response(stats_data, "stats.xlsx")
 
-@app.get("/fields")
+@app.get("/ledger/fields")
 def fields():
     """返回数据文件的字段列表，前端无需硬编码字段"""
     return {"fields": list(df.columns)}
 
 
-@app.get("/health")
+@app.get("/ledger/health")
 def health():
     """健康检查，供部署平台探活"""
     return {"status": "ok", "rows": len(df)}
@@ -273,7 +273,7 @@ def build_analytics_overview() -> Dict[str, Any]:
         }
 
 
-@app.get("/analytics/overview")
+@app.get("/ledger/analytics/overview")
 def analytics_overview():
     """获取数据分析概览"""
     if "data" in _analytics_cache:
@@ -296,9 +296,9 @@ DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 if DIST_DIR.is_dir():
     assets_dir = DIST_DIR / "assets"
     if assets_dir.is_dir():
-        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+        app.mount("/ledger/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.get("/ledger/{full_path:path}")
     def serve_spa(full_path: str):
         """静态文件命中则直接返回，否则回退到 index.html 支持前端路由刷新"""
         target = (DIST_DIR / full_path).resolve()
