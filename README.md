@@ -131,13 +131,13 @@ class node_records_csv toneRose
 
 | 接口 | 方法 | 说明 |
 | --- | --- | --- |
-| `/search` | POST | 多条件组合搜索，支持 `page`、`pageSize`；无 `conditions` 时返回全部 |
-| `/search/export` | POST | 搜索结果导出 Excel |
-| `/stats` | GET | 多字段组合统计，参数 `fields`（可多个）、`page`、`pageSize` |
-| `/stats/export` | GET | 统计结果导出 Excel |
-| `/analytics/overview` | GET | 可视化概览数据（首次计算后缓存） |
-| `/fields` | GET | 返回数据文件字段列表 |
-| `/health` | GET | 健康检查 |
+| `/ledger/search` | POST | 多条件组合搜索，支持 `page`、`pageSize`；无 `conditions` 时返回全部 |
+| `/ledger/search/export` | POST | 搜索结果导出 Excel |
+| `/ledger/stats` | GET | 多字段组合统计，参数 `fields`（可多个）、`page`、`pageSize` |
+| `/ledger/stats/export` | GET | 统计结果导出 Excel |
+| `/ledger/analytics/overview` | GET | 可视化概览数据（首次计算后缓存） |
+| `/ledger/fields` | GET | 返回数据文件字段列表 |
+| `/ledger/health` | GET | 健康检查 |
 
 ## 数据字段
 
@@ -175,7 +175,7 @@ API 与页面同源，无需配置跨域与接口地址。
 ```bash
 git clone <仓库地址> ledger && cd ledger
 bash deploy/setup.sh          # 装 Docker → 镜像加速 → 构建 → 启动 → 健康检查，约 3-6 分钟
-curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/ledger/health
 ```
 
 脚本会自动识别国内网络并切换 npm / pip / Docker 镜像源（也可 `CN=1` 强制指定）。
@@ -184,13 +184,13 @@ curl http://127.0.0.1:8000/health
 
 ```bash
 # Nginx 已在前面步骤安装，直接配置反向代理
-sed -i 's/ledger.example.com/你的域名/g' deploy/nginx.conf
+sed -i 's/example.com/你的域名/g' deploy/nginx.conf
 cp deploy/nginx.conf /etc/nginx/sites-available/你的域名
 ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后访问 `https://你的域名`。
+SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后访问 `https://你的域名/ledger/`（`www` 会自动重定向到根域名，DNS 需同时添加 `@` 和 `www` 两条 A 记录）。
 
 ### 部署文件说明
 
@@ -220,7 +220,7 @@ docker stats ledger                        # 内存占用（约 200-300MB）
 
 ```bash
 chmod +x deploy/*.sh
-(crontab -l 2>/dev/null; echo "*/5 * * * * /root/ledger/deploy/autoupdate.sh >> /var/log/ledger-autoupdate.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "*/5 * * * * cd /root/ledger && bash deploy/autoupdate.sh >> /root/ledger/deploy/autoupdate.log 2>&1") | crontab -
 ```
 
 详见 [docs/DEPLOY.md](docs/DEPLOY.md)（含 GitHub Actions 即时触发方案）。
