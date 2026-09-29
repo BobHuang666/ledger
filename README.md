@@ -123,13 +123,13 @@ curl http://127.0.0.1:8000/ledger/health
 
 ```bash
 # Nginx 已在前面步骤安装，直接配置反向代理
-sed -i 's/ledger.example.com/你的域名/g' deploy/nginx.conf
+sed -i 's/example.com/你的域名/g' deploy/nginx.conf
 cp deploy/nginx.conf /etc/nginx/sites-available/你的域名
 ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后访问 `https://你的域名/ledger/`。
+SSL 证书需手动部署（腾讯云 SSL 或 Let's Encrypt certbot），之后访问 `https://你的域名/ledger/`（`www` 会自动重定向到根域名，DNS 需同时添加 `@` 和 `www` 两条 A 记录）。
 
 ### 部署文件说明
 

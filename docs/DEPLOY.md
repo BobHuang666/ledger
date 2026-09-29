@@ -169,7 +169,7 @@ ssh -L 8000:127.0.0.1:8000 root@你的服务器IP
 
 ### 第 7 步：域名解析 + 备案
 
-1. 域名控制台添加 **A 记录**：`@` 和 `www` → 指向服务器公网 IP
+1. 域名控制台添加 **A 记录**：`@` 和 `www` → 指向服务器公网 IP（两条都要加，Nginx 已内置 www → 根域名重定向）
 2. 腾讯云控制台 → **备案** → 按引导提交（身份证、域名证书、人脸核验），等 7–20 天
 3. 备案通过后，80/443 才会放行
 
@@ -182,13 +182,13 @@ ssh -L 8000:127.0.0.1:8000 root@你的服务器IP
 
 ```bash
 # Nginx 已在前面步骤安装，直接配置反向代理
-sed -i 's/ledger.example.com/你的域名/g' deploy/nginx.conf
+sed -i 's/example.com/你的域名/g' deploy/nginx.conf
 cp deploy/nginx.conf /etc/nginx/sites-available/你的域名
 ln -sf /etc/nginx/sites-available/你的域名 /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-访问 `https://你的域名/ledger/` 即可。
+访问 `https://你的域名/ledger/` 即可（`www` 会自动重定向到根域名）。
 
 > 证书到期前需手动续期并替换文件，然后 `systemctl reload nginx`。
 > 也可使用 certbot 自动续期：`apt install -y certbot python3-certbot-nginx && certbot --nginx -d 你的域名`
