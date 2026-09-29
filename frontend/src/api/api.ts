@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 同源部署（后端托管前端）时留空；前后端分离时通过 VITE_API_BASE_URL 指定后端地址
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/ledger';
 
 export interface SearchCondition {
   field: string;

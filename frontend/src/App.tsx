@@ -8,7 +8,7 @@ const VisualizationPage = lazy(() => import('./components/VisualizationPage'));
 
 const App = () => {
   return (
-    <Router>
+    <Router basename="/ledger">
       <header className="app-header">
         <div className="app-header-inner">
           <h1 className="app-title">
