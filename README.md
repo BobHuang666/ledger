@@ -43,6 +43,67 @@ STv3/
     └── DEPLOY.md              # 部署文档（腾讯云轻量 + 域名 + HTTPS）
 ```
 
+## 系统架构
+
+```mermaid
+flowchart TD
+
+subgraph group_frontend["前端界面"]
+  node_app["应用路由<br/>[App.tsx]"]
+  node_search_page["记录搜索<br/>[SearchPage.tsx]"]
+  node_stats_page["多字段统计<br/>[StatsPage.tsx]"]
+  node_visualization_page["数据可视化<br/>[VisualizationPage.tsx]"]
+  node_api_client["API 客户端<br/>[api.ts]"]
+  node_download["Excel 下载<br/>[download.ts]"]
+  node_pagination["分页控件<br/>[Pagination.tsx]"]
+end
+
+subgraph group_backend["API 服务"]
+  node_backend_api["FastAPI 端点<br/>[main.py]"]
+  node_excel_export["Excel 响应<br/>[main.py]"]
+  node_static["静态托管 dist<br/>[main.py]"]
+end
+
+subgraph group_analysis["记录分析"]
+  node_analytics_service["分析聚合<br/>[analytics_service.py]"]
+end
+
+subgraph group_records["记录数据"]
+  node_records_csv[("收客记录<br/>[people.csv]")]
+end
+
+node_visitor(("使用者"))
+
+node_backend_api -->|"托管 dist"| node_static
+node_static -->|"提供页面"| node_app
+node_visitor -->|"打开"| node_app
+node_app -->|"路由"| node_search_page
+node_app -->|"路由"| node_stats_page
+node_app -->|"路由"| node_visualization_page
+node_search_page -->|"请求搜索"| node_api_client
+node_stats_page -->|"请求统计"| node_api_client
+node_visualization_page -->|"请求概览"| node_api_client
+node_search_page -->|"使用控件"| node_pagination
+node_stats_page -->|"使用控件"| node_pagination
+node_search_page -->|"导出下载"| node_download
+node_stats_page -->|"导出下载"| node_download
+node_api_client -->|"调用端点"| node_backend_api
+node_backend_api -->|"读取记录"| node_records_csv
+node_backend_api -->|"传入 DataFrame"| node_analytics_service
+node_analytics_service -->|"返回聚合结果"| node_backend_api
+node_backend_api -->|"生成 Excel"| node_excel_export
+node_api_client -->|"请求导出"| node_excel_export
+
+classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
+classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
+classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
+classDef toneRose fill:#ffe4e6,stroke:#e11d48,stroke-width:1.5px,color:#881337
+class node_app,node_search_page,node_stats_page,node_visualization_page,node_api_client,node_download,node_pagination,node_visitor toneBlue
+class node_backend_api,node_excel_export,node_static toneAmber
+class node_analytics_service toneMint
+class node_records_csv toneRose
+```
+
 ## 核心功能
 
 ### 1. 高级搜索（SearchPage）
